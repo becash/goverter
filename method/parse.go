@@ -97,7 +97,6 @@ func Parse(obj types.Object, opts *ParseOpts) (*Definition, error) {
 			} else {
 				actual := sig.Params().At(1).Type().String()
 				typeName := strings.Split(actual, "/")
-				print(typeName)
 				if typeName[len(typeName)-1] != "domain.Arguments" {
 					return nil, formatErr(
 						fmt.Sprintf("first parameter must be of type %s but was %s when having two parameters", opts.Converter.String(), actual))
@@ -108,7 +107,6 @@ func Parse(obj types.Object, opts *ParseOpts) (*Definition, error) {
 		} else {
 			actual := sig.Params().At(1).Type().String()
 			typeName := strings.Split(actual, "/")
-			print(typeName)
 			if typeName[len(typeName)-1] != "domain.Arguments" {
 				return nil, formatErr(
 					fmt.Sprintf("first parameter must be of type %s but was %s when having two parameters", opts.Converter.String(), actual))
