@@ -138,8 +138,14 @@ func (g *generator) buildMethod(genMethod *generatedMethod) *builder.Error {
 		funcBlock = append(stmt, jen.Return(ret...))
 	}
 
+	var inputParams []jen.Code
+	inputParams = append(inputParams, jen.Id("source").Add(source.TypeAsJen()))
+	if genMethod.Method.Definition.ArgumentsAsLastParameter {
+		inputParams = append(inputParams, jen.Id(xtype.ArgumentsVar).Op("*").Id("domain.Arguments"))
+	}
+
 	genMethod.Jen = jen.Func().Params(jen.Id(xtype.ThisVar).Op("*").Id(g.conf.Name)).Id(genMethod.Name).
-		Params(jen.Id("source").Add(source.TypeAsJen())).Params(returns...).
+		Params(inputParams...).Params(returns...).
 		Block(funcBlock...)
 
 	return nil
@@ -196,6 +202,10 @@ func (g *generator) CallMethod(
 			cause := fmt.Sprintf("Method source type mismatches with conversion source: %s != %s", definition.Source.String, source.String)
 			return nil, nil, formatErr(cause)
 		}
+	}
+
+	if definition.ArgumentsAsLastParameter {
+		params = append(params, jen.Id(xtype.ArgumentsVar))
 	}
 
 	if !definition.Target.AssignableTo(target) && !definition.TypeParams {
@@ -255,6 +265,11 @@ func (g *generator) delegateMethod(
 	if sourceID != nil {
 		params = append(params, sourceID.Code.Clone())
 	}
+
+	if delegateTo.ArgumentsAsLastParameter {
+		params = append(params, jen.Id(xtype.ArgumentsVar))
+	}
+
 	current := g.lookup[ctx.Signature]
 
 	returns := []jen.Code{delegateTo.Call.Clone().Call(params...)}
@@ -331,13 +346,13 @@ func (g *generator) Build(
 	ctx.MarkSeen(source)
 
 	if createSubMethod {
-		return g.createSubMethod(ctx, sourceID, source, target, errPath)
+		return g.createSubMethod(ctx, sourceID, source, target, errPath, ctx.Conf.ArgumentsAsLastParameter)
 	}
 
 	return g.buildNoLookup(ctx, sourceID, source, target, errPath)
 }
 
-func (g *generator) createSubMethod(ctx *builder.MethodContext, sourceID *xtype.JenID, source, target *xtype.Type, errPAth builder.ErrorPath) ([]jen.Code, *xtype.JenID, *builder.Error) {
+func (g *generator) createSubMethod(ctx *builder.MethodContext, sourceID *xtype.JenID, source, target *xtype.Type, errPAth builder.ErrorPath, addArguments bool) ([]jen.Code, *xtype.JenID, *builder.Error) {
 	signature := xtype.SignatureOf(source, target)
 
 	name := g.namer.Name(source.UnescapedID() + "To" + strings.Title(target.UnescapedID()))
@@ -356,13 +371,13 @@ func (g *generator) createSubMethod(ctx *builder.MethodContext, sourceID *xtype.
 				Call:     jen.Id(xtype.ThisVar).Dot(name),
 				OriginID: ctx.Conf.OriginID,
 				Parameters: method.Parameters{
-					Source: xtype.TypeOf(source.T),
-					Target: xtype.TypeOf(target.T),
+					Source:                   xtype.TypeOf(source.T),
+					Target:                   xtype.TypeOf(target.T),
+					ArgumentsAsLastParameter: addArguments,
 				},
 			},
 		},
 	}
-
 	g.lookup[signature] = genMethod
 	if err := g.buildMethod(genMethod); err != nil {
 		return nil, nil, err

@@ -18,9 +18,10 @@ func (m *Definition) Signature() xtype.Signature {
 }
 
 type Parameters struct {
-	ReturnError          bool
-	SelfAsFirstParameter bool
-	TypeParams           bool
-	Source               *xtype.Type
-	Target               *xtype.Type
+	ReturnError              bool
+	SelfAsFirstParameter     bool
+	ArgumentsAsLastParameter bool
+	TypeParams               bool
+	Source                   *xtype.Type
+	Target                   *xtype.Type
 }

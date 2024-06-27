@@ -11,6 +11,9 @@ import (
 // ThisVar is used as name for the reference to the converter interface.
 const ThisVar = "c"
 
+// ThisVar is used as name for the reference to the arguments
+const ArgumentsVar = "arguments"
+
 // Signature represents a signature for conversion.
 type Signature struct {
 	Source string

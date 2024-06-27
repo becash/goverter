@@ -3,6 +3,7 @@ package method
 import (
 	"fmt"
 	"go/types"
+	"strings"
 
 	"github.com/dave/jennifer/jen"
 	"github.com/jmattheis/goverter/xtype"
@@ -83,19 +84,39 @@ func Parse(obj types.Object, opts *ParseOpts) (*Definition, error) {
 	}
 
 	switch sig.Params().Len() {
+	case 3:
+		methodDef.Parameters.SelfAsFirstParameter = true
+		methodDef.Parameters.ArgumentsAsLastParameter = true
+		methodDef.Parameters.Source = xtype.TypeOf(sig.Params().At(1).Type())
 	case 2:
-		if opts.Converter == nil {
-			// converterInterface is used when searching for methods in the local package only
-			return nil, formatErr("must have one parameter when using extend with a package")
+		if opts.Converter != nil {
+			actual := sig.Params().At(0).Type().String()
+			if actual == opts.Converter.String() {
+				methodDef.Parameters.SelfAsFirstParameter = true
+				methodDef.Parameters.Source = xtype.TypeOf(sig.Params().At(1).Type())
+			} else {
+				actual := sig.Params().At(1).Type().String()
+				typeName := strings.Split(actual, "/")
+				print(typeName)
+				if typeName[len(typeName)-1] != "domain.Arguments" {
+					return nil, formatErr(
+						fmt.Sprintf("first parameter must be of type %s but was %s when having two parameters", opts.Converter.String(), actual))
+				}
+				methodDef.Parameters.ArgumentsAsLastParameter = true
+				methodDef.Parameters.Source = xtype.TypeOf(sig.Params().At(0).Type())
+			}
+		} else {
+			actual := sig.Params().At(1).Type().String()
+			typeName := strings.Split(actual, "/")
+			print(typeName)
+			if typeName[len(typeName)-1] != "domain.Arguments" {
+				return nil, formatErr(
+					fmt.Sprintf("first parameter must be of type %s but was %s when having two parameters", opts.Converter.String(), actual))
+			}
+			methodDef.Parameters.ArgumentsAsLastParameter = true
+			methodDef.Parameters.Source = xtype.TypeOf(sig.Params().At(0).Type())
 		}
 
-		actual := sig.Params().At(0).Type().String()
-		if actual != opts.Converter.String() {
-			return nil, formatErr(
-				fmt.Sprintf("first parameter must be of type %s but was %s when having two parameters", opts.Converter.String(), actual))
-		}
-		methodDef.Parameters.SelfAsFirstParameter = true
-		methodDef.Parameters.Source = xtype.TypeOf(sig.Params().At(1).Type())
 	case 1:
 		methodDef.Parameters.Source = xtype.TypeOf(sig.Params().At(0).Type())
 	case 0:
